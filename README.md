@@ -1,1 +1,2 @@
-# cut-the-cart
+# Cut the Cart
+If you're lazy like me, you probably don't want to spend your time shopping through different stores looking for different deals. This was made for people like me, who want to save time on grocery shopping.
