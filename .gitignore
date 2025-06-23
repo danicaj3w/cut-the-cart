@@ -1,3 +1,4 @@
-.DS_Store
 chromedriver-mac-x64/
-selenium_scraper/scraper.py
+.DS_Store
+.env
+kroger_api

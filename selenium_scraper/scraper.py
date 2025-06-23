@@ -1,4 +1,5 @@
 # Sources - Udemy: Web Scraping in Python Selenium, Scrapy by Frank Andrade
+# ANOTHER NOTE: DO NOT USE, GOES AGAINST TARGET ToS
 import json
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
