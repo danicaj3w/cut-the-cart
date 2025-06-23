@@ -75,7 +75,7 @@ def search_products(search_query,location_id=None,limit=20):
         'filter.limit': limit
     }
     
-    if location_id: # ? What does this do?
+    if location_id:
         params['filter.locationId'] = location_id
 
     try:
@@ -96,7 +96,6 @@ def lambda_function(event, context):
     }
 
     try:
-
         # Get the user's search query
         query_string_parameters = event.get('queryStringParameters')
         if not query_string_parameters or 'query' not in query_string_parameters:
@@ -118,20 +117,7 @@ def lambda_function(event, context):
         # Make multiple calls to Kroger API for each search term
         # https://developer.kroger.com/api-products/api/product-api-public#tag/Products/operation/productGet
         for term in search_terms:
-            kroger_api_params = {
-                'filter.term': term,
-                'filter.limit': 20 
-                # 'filter.locationId': 'YOUR_KROGER_STORE_ID' # Uncomment and replace if you want to filter by specific store
-            }
-
-            product_headers = {
-                'Authorization': f'Bearer {access_token}'
-            }
-
-            # Make a GET request to the Kroger product search URL
-            product_response = requests.get(KROGER_PRODUCT_SEARCH_URL, headers=product_headers, params=kroger_api_params)
-            product_response.raise_for_status()
-            products_data = product_response.json().get('data', [])
+            products_data = search_products(term).get('data', [])
 
             # Process and store data in DynamoDB based on product details
             for product in products_data:
@@ -144,9 +130,8 @@ def lambda_function(event, context):
                     # Extract image URL from 'images' list
                     'imageUrl': product.get('images', [{}])[0].get('sizes', [{}])[0].get('url') if product.get('images') else None,
                     # Extract store ID from the first item's fulfillment details
+                    # ! Something is wrong with the store id
                     'storeId': product.get('items', [{}])[0].get('fulfillment', {}).get('store', {}).get('id') if product.get('items') else None,
-                    # Add a timestamp for when the data was last updated/fetched
-                    'lastUpdated': boto3.util.isoformat(boto3.util.current_time()), # ISO 8601 timestamp for sorting/filtering
                 }
 
                 # Store item into DynamoDB table
@@ -160,17 +145,14 @@ def lambda_function(event, context):
         }
 
     except requests.exceptions.RequestException as e:
-        # Catch errors specifically related to HTTP requests (network issues, bad API responses).
         print(f"Kroger API or network error: {e}") # Log the error to CloudWatch
-        status_code = 502 # 502 Bad Gateway indicates an issue with an upstream server (Kroger API)
+        status_code = 502
         response_body = {"message": "Error communicating with Kroger API.", "error": str(e)}
     except ValueError as e:
-        # Catch errors related to invalid configuration or data (e.g., missing access token).
         print(f"Configuration or data error: {e}")
-        status_code = 500 # Internal Server Error for issues within our Lambda logic/config
+        status_code = 500
         response_body = {"message": "Internal server configuration error.", "error": str(e)}
     except Exception as e:
-        # Catch any other unexpected errors. This is a general fallback.
         print(f"An unexpected error occurred: {e}")
         status_code = 500
         response_body = {"message": "An unexpected server error occurred.", "error": str(e)}
@@ -181,15 +163,11 @@ def lambda_function(event, context):
             'body': json.dumps(response_body)
         }
     
-if __name__ == '__main__':
-    print(search_products('milk'))
-#     mock_event = {'search_query': 'milk'} 
+def lambda_handler(event,context):
+    return lambda_function(event, context)
 
-#     result = lambda_function(mock_event, None)
-#     print(result)
-
-    # # Simulate Lambda event
-    # mock_event = {}  # Put test data here if needed
-    # mock_context = None
-    # result = lambda_handler(mock_event, mock_context)
-    # print(result)
+# To test through CLI
+# aws lambda invoke \
+#   --function-name krogerProductsHandler \
+#   --payload file://test_event.json \
+#   output.json
