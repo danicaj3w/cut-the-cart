@@ -7,3 +7,6 @@ test_event.json
 output.json
 kroger_api
 my_lambda_deployment_package.zip
+
+# App specfic ignores
+app/node_modules

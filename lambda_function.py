@@ -96,21 +96,23 @@ def lambda_function(event, context):
     }
 
     try:
-        # Get the user's search query
-        query_string_parameters = event.get('queryStringParameters')
-        if not query_string_parameters or 'query' not in query_string_parameters:
+        if 'body' not in event or not event['body']:
             status_code = 400
-            response_body = {"message": "Missing 'query' parameter."}
+            response_body = {"message": "Request body is missing or empty."}
             return {
                 'statusCode': status_code,
                 'headers': headers,
                 'body': json.dumps(response_body)
             }
 
-        # Extract query terms
+        # 2. Parse the JSON string from event['body'] into a Python dictionary
+        request_body = json.loads(event['body'])
+
+        # 3. Now, access the 'query' key from the *parsed* request_body dictionary
+        query = request_body.get('query') # Use .get() for safe access
+
         # Ex: 'cookies, milk' -> ['cookies', 'milk']
-        raw_query = query_string_parameters['query']
-        search_terms = [term.strip() for term in raw_query.split(',') if term.strip()]
+        search_terms = [term.strip() for term in query.split(',') if term.strip()]
 
         all_products = []
 
@@ -130,7 +132,6 @@ def lambda_function(event, context):
                     # Extract image URL from 'images' list
                     'imageUrl': product.get('images', [{}])[0].get('sizes', [{}])[0].get('url') if product.get('images') else None,
                     # Extract store ID from the first item's fulfillment details
-                    # ! Something is wrong with the store id
                     'storeId': product.get('items', [{}])[0].get('fulfillment', {}).get('store', {}).get('id') if product.get('items') else None,
                 }
 
