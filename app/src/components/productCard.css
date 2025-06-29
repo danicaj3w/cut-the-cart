@@ -1,0 +1,24 @@
+.product-card {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    background-color: aliceblue;
+    color: black;
+    padding: 16px;
+    text-align: left;
+    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+    border-radius: black solid 8px;
+}
+/* Need to change the colors */
+
+.product-image {
+    fill: cover;
+    width: 200px;
+    height: 200px;
+    margin-bottom: 5px;
+}
+
+.add-button {
+    background-color: purple;
+    border-radius: black solid 8px;
+}

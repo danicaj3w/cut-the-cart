@@ -7,7 +7,7 @@
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
-  font-family: 'Courier New', Courier, monospace
+  font-family: "Courier New", Courier, monospace;
 }
 /* }
 
@@ -17,3 +17,9 @@
   width: auto;
   height: auto;
 } */
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr); 
+  gap: 16px;
+}

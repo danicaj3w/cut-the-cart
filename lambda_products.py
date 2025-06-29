@@ -59,7 +59,7 @@ def get_kroger_access_token():
     except requests.exceptions.RequestException as e:
         print(f"Error getting Kroger access token: {e}")
         raise
-
+    
 
 def search_products(search_query,location_id=None,limit=20):
     access_token = get_kroger_access_token()
@@ -127,12 +127,11 @@ def lambda_function(event, context):
                     'productId': product.get('productId'),
                     'name': product.get('description'), 
                     'brand': product.get('brand'),
-                    # Extract price from 'items' list
                     'price': product.get('items', [{}])[0].get('price') if product.get('items') else None,
-                    # Extract image URL from 'images' list
                     'imageUrl': product.get('images', [{}])[0].get('sizes', [{}])[0].get('url') if product.get('images') else None,
-                    # Extract store ID from the first item's fulfillment details
                     'storeId': product.get('items', [{}])[0].get('fulfillment', {}).get('store', {}).get('id') if product.get('items') else None,
+                    # Add location id
+
                 }
 
                 # Store item into DynamoDB table
