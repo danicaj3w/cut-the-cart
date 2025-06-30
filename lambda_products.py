@@ -1,10 +1,9 @@
 import json
 import os
-import base64
 import requests
 import boto3
-import time
 from dotenv import load_dotenv
+from kroger_access import get_kroger_access_token, get_product_url
 
 # Load Kroger info from a .env 
 load_dotenv()
@@ -12,55 +11,7 @@ load_dotenv()
 # Initialize DynamoDB client
 dynamodb = boto3.resource('dynamodb',  region_name='us-west-1')
 table = dynamodb.Table(os.environ['kroger_dynamodb'])
-
-# Replace with your credentials or set them in a .env file
-CLIENT_ID = os.getenv("CLIENT_ID", "cut-the-cart-bbc69jn8")
-CLIENT_SECRET=os.getenv("CLIENT_SECRET", "igboO52f7OJ81C7dKT3oi1HBZiRt4h0BEdQYJ2Fs")
-KROGER_TOKEN_URL = 'https://api.kroger.com/v1/connect/oauth2/token'
-KROGER_PRODUCT_SEARCH_URL = 'https://api.kroger.com/v1/products'
-
-_kroger_access_token = None
-_kroger_token_expiry_time = 0 # Unix timestamp
-
-def get_kroger_access_token():
-    global _kroger_access_token, _kroger_token_expiry_time
-
-    # Check if the existing token is still valid
-    if _kroger_access_token and time.time() < _kroger_token_expiry_time:
-        print("Using cached Kroger access token.")
-        return _kroger_access_token
-
-    print("Requesting new Kroger access token...")
-    try:
-        # Base64 encode client ID and client secret
-        auth_string = f"{CLIENT_ID}:{CLIENT_SECRET}"
-        encoded_auth = base64.b64encode(auth_string.encode()).decode()
-
-        headers = {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Authorization': f'Basic {encoded_auth}'
-        }
-        data = {
-            'grant_type': 'client_credentials',
-            'scope': 'product.compact'
-        }
-
-        response = requests.post(KROGER_TOKEN_URL, headers=headers, data=data)
-        response.raise_for_status()
-
-        token_data = response.json()
-        _kroger_access_token = token_data['access_token']
-        # Set expiry time a bit before actual expiration to be safe (e.g., 60 seconds buffer)
-        _kroger_token_expiry_time = time.time() + token_data['expires_in'] - 60
-
-        print("Successfully obtained new Kroger access token.")
-        return _kroger_access_token
-
-    except requests.exceptions.RequestException as e:
-        print(f"Error getting Kroger access token: {e}")
-        raise
     
-
 def search_products(search_query,location_id=None,limit=20):
     access_token = get_kroger_access_token()
     if not access_token:
@@ -79,7 +30,7 @@ def search_products(search_query,location_id=None,limit=20):
         params['filter.locationId'] = location_id
 
     try:
-        response = requests.get(KROGER_PRODUCT_SEARCH_URL, headers=headers, params=params)
+        response = requests.get(get_product_url(), headers=headers, params=params)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
@@ -87,7 +38,7 @@ def search_products(search_query,location_id=None,limit=20):
         raise
 
 
-def lambda_function(event, context):
+def lambda_handler(event, context):
     # Initial response values
     response_body = {}
     status_code = 200
@@ -131,7 +82,6 @@ def lambda_function(event, context):
                     'imageUrl': product.get('images', [{}])[0].get('sizes', [{}])[0].get('url') if product.get('images') else None,
                     'storeId': product.get('items', [{}])[0].get('fulfillment', {}).get('store', {}).get('id') if product.get('items') else None,
                     # Add location id
-
                 }
 
                 # Store item into DynamoDB table
@@ -162,12 +112,3 @@ def lambda_function(event, context):
             'headers': headers,
             'body': json.dumps(response_body)
         }
-    
-def lambda_handler(event,context):
-    return lambda_function(event, context)
-
-# To test through CLI
-# aws lambda invoke \
-#   --function-name krogerProductsHandler \
-#   --payload file://test_event.json \
-#   output.json
