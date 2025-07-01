@@ -2,7 +2,7 @@
     display: flex;
     flex-direction: column;
     position: relative;
-    background-color: aliceblue;
+    background-color: beige;
     color: black;
     padding: 16px;
     text-align: left;
@@ -19,6 +19,6 @@
 }
 
 .add-button {
-    background-color: purple;
+    background-color: wheat;
     border-radius: black solid 8px;
 }
